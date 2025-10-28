@@ -26,6 +26,22 @@ export default function DepositButton({ address, sessionId, onDepositSuccess }) 
       return;
     }
 
+    // Check network
+    if (window.ethereum) {
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        const baseChainId = '0x2105'; // Base mainnet
+        
+        if (chainId !== baseChainId) {
+          setStatus('error');
+          setMessage('Please switch to Base network (Chain ID: 8453) before depositing.');
+          return;
+        }
+      } catch (error) {
+        console.warn('[DepositButton] Could not check chain ID:', error);
+      }
+    }
+
     try {
       setStatus('pending');
       setMessage('Initiating deposit...');
@@ -125,12 +141,28 @@ export default function DepositButton({ address, sessionId, onDepositSuccess }) 
 
     } catch (error) {
       console.error('[DepositButton] Deposit error:', error);
+      
+      let errorMessage = 'Deposit failed. Please try again.';
+      
+      // Check for specific error types
+      if (error.message?.includes('transfer amount exceeds balance')) {
+        errorMessage = 'Insufficient USDC balance on Base network. Please add USDC to your wallet first.';
+      } else if (error.message?.includes('user rejected')) {
+        errorMessage = 'Transaction cancelled by user.';
+      } else if (error.message?.includes('insufficient funds')) {
+        errorMessage = 'Insufficient funds for gas. Please add ETH for gas fees.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network mismatch. Please switch to Base network (Chain ID: 8453).';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setStatus('error');
-      setMessage(error.message || 'Deposit failed. Please try again.');
+      setMessage(errorMessage);
       
       setTimeout(() => {
         setStatus('idle');
-      }, 5000);
+      }, 7000); // Longer timeout for errors
     }
   };
 
@@ -224,6 +256,11 @@ export default function DepositButton({ address, sessionId, onDepositSuccess }) 
           <p className="text-xs text-blue-700 mt-1">
             <strong>Important:</strong> You need USDC on Base network to make a deposit.
           </p>
+          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded">
+            <p className="text-xs text-yellow-800">
+              💡 <strong>Tip:</strong> Make sure you have USDC balance on Base network. You can bridge USDC from other networks or purchase directly on Base.
+            </p>
+          </div>
         </div>
       </div>
     </div>
