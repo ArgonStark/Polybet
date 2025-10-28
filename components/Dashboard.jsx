@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ethers } from 'ethers';
+import DepositButton from './DepositButton';
 
 export default function Dashboard({ address, sessionId, setSessionId }) {
   const [balances, setBalances] = useState(null);
@@ -203,6 +204,15 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
           </div>
         )}
       </div>
+      
+      {/* Deposit */}
+      {sessionId && proxyWallet && (
+        <DepositButton 
+          address={address}
+          sessionId={sessionId}
+          onDepositSuccess={fetchBalances}
+        />
+      )}
       
       {/* Balances */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
