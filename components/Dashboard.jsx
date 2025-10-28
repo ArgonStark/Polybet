@@ -35,7 +35,8 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
             console.log('[Dashboard] Session ID set:', data.sessionId);
             console.log('[Dashboard] Auto-fetching proxy wallet...');
             // Auto-fetch proxy wallet after successful login
-            await fetchProxyWallet();
+            const success = await fetchProxyWallet();
+            console.log('[Dashboard] Proxy wallet fetch result:', success);
             console.log('[Dashboard] Authentication complete');
           } else {
             console.error('[Dashboard] Login failed:', data.error);
@@ -71,10 +72,13 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       console.log('[Dashboard] Proxy wallet response:', data);
       
       if (data.success && data.proxyWallet) {
+        console.log('[Dashboard] Setting proxy wallet in state:', data.proxyWallet.address);
         setProxyWallet(data.proxyWallet);
         setDepositAddress(data.proxyWallet.address);
+        console.log('[Dashboard] Proxy wallet set successfully');
         return true; // Success
       }
+      console.error('[Dashboard] Proxy wallet response had no success or no proxyWallet');
       return false;
     } catch (error) {
       console.error('[Dashboard] Error fetching proxy wallet:', error);
