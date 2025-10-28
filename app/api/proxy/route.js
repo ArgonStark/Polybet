@@ -136,18 +136,6 @@ export async function POST(request) {
       return errorResponse('Failed to create proxy wallet: ' + error.message, 500);
     }
     
-    const newProxyData = await createResponse.json();
-    console.log('[proxy] Created new proxy wallet:', newProxyData.address);
-    
-    // Store in session
-    session.proxyWallet = newProxyData;
-    updateSessionWithProxy(sessionId, newProxyData);
-    
-    return NextResponse.json({
-      success: true,
-      proxyWallet: newProxyData
-    });
-    
   } catch (error) {
     console.error('[proxy] Error:', error);
     return errorResponse(error.message || 'Internal server error', 500);
