@@ -39,3 +39,4 @@ npm run dev
 
 The Polymarket SDK packages mentioned in the requirements may not be available on npm yet. This implementation uses ethers.js directly. To integrate the official SDK, update the imports in `lib/polymarket.js` when available.
 
+# Polybet
