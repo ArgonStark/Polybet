@@ -33,11 +33,10 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
           if (data.success) {
             setSessionId(data.sessionId);
             console.log('[Dashboard] Session ID set:', data.sessionId);
+            console.log('[Dashboard] Auto-fetching proxy wallet...');
             // Auto-fetch proxy wallet after successful login
-            const proxyWalletFetched = await fetchProxyWallet();
-            if (proxyWalletFetched) {
-              console.log('[Dashboard] Proxy wallet fetched successfully');
-            }
+            await fetchProxyWallet();
+            console.log('[Dashboard] Authentication complete');
           } else {
             console.error('[Dashboard] Login failed:', data.error);
           }
@@ -89,9 +88,25 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       return;
     }
     
+    // If proxy wallet not in state, check if it exists in session
     if (!proxyWallet) {
-      alert('Please wait for proxy wallet to load first');
-      return;
+      console.log('[Dashboard] Proxy wallet not in state, checking session...');
+      const checkRes = await fetch('/api/proxy', {
+        method: 'GET',
+        headers: { 
+          'x-session-id': sessionId,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const checkData = await checkRes.json();
+      if (checkData.success && checkData.proxyWallet) {
+        console.log('[Dashboard] Found proxy wallet in session');
+        setProxyWallet(checkData.proxyWallet);
+      } else {
+        alert('Please wait for proxy wallet to load first');
+        return;
+      }
     }
     
     try {
