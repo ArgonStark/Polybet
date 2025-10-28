@@ -30,14 +30,17 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       const data = await res.json();
       console.log('[Dashboard] Login response data:', data);
       
-      if (data.success) {
-        setSessionId(data.sessionId);
-        console.log('[Dashboard] Session ID set:', data.sessionId);
-        // Auto-fetch proxy wallet after successful login
-        await fetchProxyWallet();
-      } else {
-        console.error('[Dashboard] Login failed:', data.error);
-      }
+          if (data.success) {
+            setSessionId(data.sessionId);
+            console.log('[Dashboard] Session ID set:', data.sessionId);
+            // Auto-fetch proxy wallet after successful login
+            const proxyWalletFetched = await fetchProxyWallet();
+            if (proxyWalletFetched) {
+              console.log('[Dashboard] Proxy wallet fetched successfully');
+            }
+          } else {
+            console.error('[Dashboard] Login failed:', data.error);
+          }
     } catch (error) {
       console.error('[Dashboard] Authentication error:', error);
     }
@@ -81,25 +84,17 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
   };
 
   const fetchDepositAddress = async () => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      alert('Please authenticate first');
+      return;
+    }
+    
+    if (!proxyWallet) {
+      alert('Please wait for proxy wallet to load first');
+      return;
+    }
     
     try {
-      // Ensure proxy wallet exists first
-      let hasProxyWallet = !!proxyWallet;
-      
-      if (!hasProxyWallet) {
-        console.log('[Dashboard] Proxy wallet not found, fetching it first...');
-        hasProxyWallet = await fetchProxyWallet();
-        
-        // Wait a moment for session to update
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      if (!hasProxyWallet) {
-        alert('Failed to create proxy wallet. Please try again.');
-        return;
-      }
-      
       console.log('[Dashboard] Fetching deposit address...');
       const res = await fetch('/api/deposit-address', {
         headers: { 
