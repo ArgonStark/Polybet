@@ -6,8 +6,9 @@ import { getSession } from '@/lib/sessions';
 export async function GET(request) {
   try {
     const sessionId = request.headers.get('x-session-id');
-    
     console.log('[deposit] Received sessionId:', sessionId);
+    console.log('[deposit] Type of sessionId:', typeof sessionId);
+    console.log('[deposit] Length of sessionId:', sessionId?.length);
     
     if (!sessionId) {
       console.log('[deposit] No sessionId provided');
@@ -19,6 +20,7 @@ export async function GET(request) {
     
     if (!session) {
       console.log('[deposit] Session not found for ID:', sessionId);
+      console.log('[deposit] Available sessions:', JSON.stringify(Array.from(global.sessionsMap?.keys() || [])));
       return errorResponse('Invalid or expired session', 401);
     }
     

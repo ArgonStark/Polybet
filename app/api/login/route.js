@@ -62,7 +62,14 @@ export async function POST(request) {
     console.log('[login] Polymarket auth successful');
     
     const sessionId = uuidv4();
+    console.log('[login] Generated sessionId:', sessionId);
+    console.log('[login] SessionId type:', typeof sessionId);
+    console.log('[login] SessionId length:', sessionId.length);
+    
     const session = createSession(sessionId, address, authData);
+    
+    console.log('[login] Session created successfully');
+    console.log('[login] Total sessions now:', global.sessionsMap?.size || 0);
     
     return NextResponse.json({
       success: true,
