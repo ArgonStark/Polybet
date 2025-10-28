@@ -49,10 +49,17 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
   };
 
   const getDepositAddress = async () => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      console.log('[Dashboard] No sessionId available');
+      return;
+    }
     console.log('[Dashboard] Getting deposit address with sessionId:', sessionId);
+    console.log('[Dashboard] SessionId type:', typeof sessionId);
     const res = await fetch('/api/deposit', {
-      headers: { 'x-session-id': sessionId }
+      headers: { 
+        'x-session-id': sessionId,
+        'Content-Type': 'application/json'
+      }
     });
     console.log('[Dashboard] Deposit response status:', res.status);
     const data = await res.json();
