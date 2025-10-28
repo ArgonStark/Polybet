@@ -106,10 +106,14 @@ export async function POST(request) {
       console.log('[proxy] Using deterministic salt for user:', userAddress);
       
       // Skip API call for now, create deterministic mock proxy wallet
+      // Create a wallet from the server key to get its address
+      const serverWallet = new ethers.Wallet(serverPrivateKey);
+      const serverAddress = serverWallet.address;
+      
       const deterministicHash = ethers.keccak256(
         ethers.AbiCoder.defaultAbiCoder().encode(
           ['address', 'address'],
-          [userAddress, serverPrivateKey]
+          [userAddress, serverAddress]
         )
       );
       
