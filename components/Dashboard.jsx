@@ -9,19 +9,33 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
   const [loading, setLoading] = useState(false);
 
   const authenticate = async () => {
-    if (!window.ethereum) return;
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const message = 'Authenticate with Polymarket';
-    const signature = await signer.signMessage(message);
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address, signature, message })
-    });
-    const data = await res.json();
-    if (data.success) {
-      setSessionId(data.sessionId);
+    try {
+      if (!window.ethereum) return;
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const message = 'Authenticate with Polymarket';
+      const signature = await signer.signMessage(message);
+      
+      console.log('[Dashboard] Authenticating with:', { address, signature, message });
+      
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, signature, message })
+      });
+      
+      console.log('[Dashboard] Login response status:', res.status);
+      const data = await res.json();
+      console.log('[Dashboard] Login response data:', data);
+      
+      if (data.success) {
+        setSessionId(data.sessionId媳妇);
+        console.log('[Dashboard] Session ID set:', data.sessionId);
+      } else {
+        console.error('[Dashboard] Login failed:', data.error);
+      }
+    } catch (error) {
+      console.error('[Dashboard] Authentication error:', error);
     }
   };
 
@@ -36,10 +50,13 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
 
   const getDepositAddress = async () => {
     if (!sessionId) return;
+    console.log('[Dashboard] Getting deposit address with sessionId:', sessionId);
     const res = await fetch('/api/deposit', {
       headers: { 'x-session-id': sessionId }
     });
+    console.log('[Dashboard] Deposit response status:', res.status);
     const data = await res.json();
+    console.log('[Dashboard] Deposit response data:', data);
     if (data.success) setDepositAddress(data.depositAddress);
   };
 
