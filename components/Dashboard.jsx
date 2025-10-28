@@ -53,7 +53,7 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
   };
 
   const fetchProxyWallet = async () => {
-    if (!sessionId) return;
+    if (!sessionId) return false;
     
     try {
       console.log('[Dashboard] Fetching proxy wallet...');
@@ -71,9 +71,12 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       if (data.success && data.proxyWallet) {
         setProxyWallet(data.proxyWallet);
         setDepositAddress(data.proxyWallet.address);
+        return true; // Success
       }
+      return false;
     } catch (error) {
       console.error('[Dashboard] Error fetching proxy wallet:', error);
+      return false;
     }
   };
 
@@ -82,9 +85,19 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
     
     try {
       // Ensure proxy wallet exists first
-      if (!proxyWallet) {
+      let hasProxyWallet = !!proxyWallet;
+      
+      if (!hasProxyWallet) {
         console.log('[Dashboard] Proxy wallet not found, fetching it first...');
-        await fetchProxyWallet();
+        hasProxyWallet = await fetchProxyWallet();
+        
+        // Wait a moment for session to update
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      if (!hasProxyWallet) {
+        alert('Failed to create proxy wallet. Please try again.');
+        return;
       }
       
       console.log('[Dashboard] Fetching deposit address...');
@@ -103,7 +116,7 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
         setDepositAddress(data.depositAddress);
       } else {
         console.error('[Dashboard] Deposit address error:', data.error);
-        alert('Please get proxy wallet first by clicking "Fetch Proxy Wallet"');
+        alert('Error: ' + data.error);
       }
     } catch (error) {
       console.error('[Dashboard] Error fetching deposit address:', error);
