@@ -7,13 +7,18 @@ export async function GET(request) {
   try {
     const sessionId = request.headers.get('x-session-id');
     
+    console.log('[deposit] Received sessionId:', sessionId);
+    
     if (!sessionId) {
+      console.log('[deposit] No sessionId provided');
       return errorResponse('Missing session ID', 401);
     }
     
     const session = getSession(sessionId);
+    console.log('[deposit] Session lookup result:', session ? 'found' : 'not found');
     
     if (!session) {
+      console.log('[deposit] Session not found for ID:', sessionId);
       return errorResponse('Invalid or expired session', 401);
     }
     
