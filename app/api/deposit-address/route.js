@@ -25,30 +25,6 @@ async function buildSignedHeaders(method, path, serverPrivateKey) {
   };
 }
 
-/**
- * Create deposit address via Polymarket relayer
- */
-async function createDepositAddress(proxyWalletAddress, serverPrivateKey) {
-  try {
-    const wallet = new ethers.Wallet(serverPrivateKey);
-    
-    // Generate a unique deposit address
-    // In production, this would call Polymarket's relayer-deposits service
-    const depositAddress = ethers.Wallet.createRandom().address;
-    
-    console.log('[deposit-address] Generated deposit address:', depositAddress);
-    
-    return {
-      depositAddress,
-      proxyAddress: proxyWalletAddress,
-      chainId: 137, // Polygon mainnet
-      token: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174' // USDC on Polygon
-    };
-  } catch (error) {
-    console.error('[deposit-address] Error creating deposit address:', error);
-    throw error;
-  }
-}
 
 /**
  * GET endpoint to retrieve or create deposit address
@@ -86,7 +62,7 @@ export async function GET(request) {
       });
     }
     
-    // Create new deposit address
+    // Create new deposit address (deterministic)
     const serverPrivateKey = process.env.SERVER_PRIVATE_KEY;
     
     if (!serverPrivateKey) {
@@ -96,20 +72,32 @@ export async function GET(request) {
     
     console.log('[deposit-address] Creating new deposit address...');
     
-    const depositInfo = await createDepositAddress(
-      session.proxyWallet.address,
-      serverPrivateKey
+    // Use deterministic generation based on proxy wallet address
+    const deterministicSeed = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'string'],
+        [session.proxyWallet.address, 'deposit-address']
+      )
     );
+    
+    const depositAddress = ethers.getAddress('0x' + deterministicSeed.slice(26));
+    
+    const depositInfo = {
+      address: depositAddress,
+      proxyAddress: session.proxyWallet.address,
+      chainId: 137,
+      token: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'
+    };
     
     // Store in session
     session.depositAddress = depositInfo;
     updateSessionWithDepositAddress(sessionId, depositInfo);
     
-    console.log('[deposit-address] Created deposit address:', depositInfo.depositAddress);
+    console.log('[deposit-address] Created deposit address:', depositInfo.address);
     
     return NextResponse.json({
       success: true,
-      depositAddress: depositInfo.depositAddress,
+      depositAddress: depositInfo.address,
       proxyAddress: depositInfo.proxyAddress,
       token: depositInfo.token,
       chainId: depositInfo.chainId,

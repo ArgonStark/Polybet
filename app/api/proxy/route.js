@@ -94,13 +94,17 @@ export async function POST(request) {
       console.error('[proxy] Error fetching existing wallet:', error);
     }
     
-    // Create new proxy wallet
+    // Create new proxy wallet using deterministic generation
+    const salt = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['address'], [userAddress]));
+    console.log('[proxy] Using deterministic salt for user:', userAddress);
+    
     const createPath = '/v1/proxy-wallets';
     const headers = await buildSignedHeaders('POST', createPath, serverPrivateKey);
     
     const createData = {
       owner: userAddress,
-      chain_id: 137 // Polygon mainnet
+      chain_id: 137, // Polygon mainnet
+      salt: salt // Use deterministic salt
     };
     
     console.log('[proxy] Creating new proxy wallet with data:', createData);
@@ -114,12 +118,18 @@ export async function POST(request) {
       const errorText = await createResponse.text();
       console.error('[proxy] Failed to create proxy wallet:', errorText);
       
-      // For development, create a mock proxy wallet
+      // For development, create a deterministic mock proxy wallet
+      const deterministicHash = ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ['address', 'address'],
+          [userAddress, serverPrivateKey]
+        )
+      );
       const mockProxyWallet = {
-        address: ethers.Wallet.createRandom().address,
+        address: ethers.getAddress('0x' + deterministicHash.slice(26)), // Last 20 bytes
         owner: userAddress,
         chain_id: 137,
-        salt: ethers.hexlify(ethers.randomBytes(32))
+        salt: salt
       };
       
       console.warn('[proxy] Using mock proxy wallet for development');
