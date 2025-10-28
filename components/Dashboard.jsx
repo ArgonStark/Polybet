@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ethers } from 'ethers';
 
 export default function Dashboard({ address, sessionId, setSessionId }) {
@@ -29,7 +29,7 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       console.log('[Dashboard] Login response data:', data);
       
       if (data.success) {
-        setSessionId(data.sessionId媳妇);
+        setSessionId(data.sessionId);
         console.log('[Dashboard] Session ID set:', data.sessionId);
       } else {
         console.error('[Dashboard] Login failed:', data.error);
