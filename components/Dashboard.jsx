@@ -56,10 +56,13 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
   };
 
   const fetchProxyWallet = async () => {
-    if (!sessionId) return false;
+    if (!sessionId) {
+      console.log('[Dashboard] No sessionId available');
+      return false;
+    }
     
     try {
-      console.log('[Dashboard] Fetching proxy wallet...');
+      console.log('[Dashboard] Fetching proxy wallet with sessionId:', sessionId);
       const res = await fetch('/api/proxy', {
         method: 'POST',
         headers: { 
@@ -68,8 +71,9 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
         }
       });
       
+      console.log('[Dashboard] Response status:', res.status);
       const data = await res.json();
-      console.log('[Dashboard] Proxy wallet response:', data);
+      console.log('[Dashboard] Proxy wallet response data:', JSON.stringify(data, null, 2));
       
       if (data.success && data.proxyWallet) {
         console.log('[Dashboard] Setting proxy wallet in state:', data.proxyWallet.address);
@@ -78,7 +82,7 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
         console.log('[Dashboard] Proxy wallet set successfully');
         return true; // Success
       }
-      console.error('[Dashboard] Proxy wallet response had no success or no proxyWallet');
+      console.error('[Dashboard] Proxy wallet response had no success or no proxyWallet. Response:', data);
       return false;
     } catch (error) {
       console.error('[Dashboard] Error fetching proxy wallet:', error);
