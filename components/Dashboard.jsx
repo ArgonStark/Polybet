@@ -31,11 +31,12 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       console.log('[Dashboard] Login response data:', data);
       
           if (data.success) {
-            setSessionId(data.sessionId);
             console.log('[Dashboard] Session ID set:', data.sessionId);
+            setSessionId(data.sessionId);
             console.log('[Dashboard] Auto-fetching proxy wallet...');
             // Auto-fetch proxy wallet after successful login
-            const success = await fetchProxyWallet();
+            // Pass sessionId directly since state hasn't updated yet
+            const success = await fetchProxyWallet(data.sessionId);
             console.log('[Dashboard] Proxy wallet fetch result:', success);
             console.log('[Dashboard] Authentication complete');
           } else {
@@ -55,18 +56,20 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
     if (data.success) setBalances(data.balances);
   };
 
-  const fetchProxyWallet = async () => {
-    if (!sessionId) {
+  const fetchProxyWallet = async (overrideSessionId = null) => {
+    const idToUse = overrideSessionId || sessionId;
+    
+    if (!idToUse) {
       console.log('[Dashboard] No sessionId available');
       return false;
     }
     
     try {
-      console.log('[Dashboard] Fetching proxy wallet with sessionId:', sessionId);
+      console.log('[Dashboard] Fetching proxy wallet with sessionId:', idToUse);
       const res = await fetch('/api/proxy', {
         method: 'POST',
         headers: { 
-          'x-session-id': sessionId,
+          'x-session-id': idToUse,
           'Content-Type': 'application/json'
         }
       });
