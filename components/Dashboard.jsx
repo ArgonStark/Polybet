@@ -81,6 +81,12 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
     if (!sessionId) return;
     
     try {
+      // Ensure proxy wallet exists first
+      if (!proxyWallet) {
+        console.log('[Dashboard] Proxy wallet not found, fetching it first...');
+        await fetchProxyWallet();
+      }
+      
       console.log('[Dashboard] Fetching deposit address...');
       const res = await fetch('/api/deposit-address', {
         headers: { 
@@ -95,6 +101,9 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       if (data.success) {
         setDepositInfo(data);
         setDepositAddress(data.depositAddress);
+      } else {
+        console.error('[Dashboard] Deposit address error:', data.error);
+        alert('Please get proxy wallet first by clicking "Fetch Proxy Wallet"');
       }
     } catch (error) {
       console.error('[Dashboard] Error fetching deposit address:', error);
