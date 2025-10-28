@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { createSession, getSession } from '@/lib/sessions';
-import { authenticatedRequest, errorResponse } from '@/lib/polymarket';
+import { errorResponse } from '@/lib/polymarket';
 import { v4 as uuidv4 } from 'uuid';
 
 const CLOB_HOST = process.env.POLY_CLOB_HOST || 'https://clob.polymarket.com';
@@ -15,25 +15,22 @@ export async function POST(request) {
     if (!address || !signature || !message) {
       return errorResponse('Missing required fields: address, signature, message', 400);
     }
-    
+    console.log('[login] received:', { address, message, signature });
+
     const recoveredAddress = ethers.verifyMessage(message, signature);
+    console.log('[login] recovered address:', recoveredAddress);
+
     console.log('[login] Signature verification:', recoveredAddress.toLowerCase() === address.toLowerCase());
     
     if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
       return errorResponse('Invalid signature', 401);
     }
     
-    const authResponse = await authenticatedRequest(
-      `${CLOB_HOST}/v1/auth/login`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          address,
-          signature,
-          message
-        })
-      }
-    );
+    const authResponse = await fetch(`${CLOB_HOST}/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address, signature, message })
+    });
     
     if (!authResponse.ok) {
       const error = await authResponse.text();
