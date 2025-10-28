@@ -8,18 +8,15 @@ const CLOB_HOST = process.env.POLY_CLOB_HOST || 'https://clob.polymarket.com';
 /**
  * Build signed headers for Polymarket API requests
  */
-function buildSignedHeaders(method, path, serverPrivateKey) {
+async function buildSignedHeaders(method, path, serverPrivateKey) {
   const wallet = new ethers.Wallet(serverPrivateKey);
   
   // Create message to sign
   const timestamp = Date.now();
   const message = `${method}\n${path}\n${timestamp}`;
   
-  // Sign the message
-  const messageHash = ethers.id(message);
-  const signature = wallet.signingKey.signSync(messageHash.slice(2), {
-    expand: false
-  });
+  // Sign the message using ethers v6 signature format
+  const signature = await wallet.signMessage(ethers.toUtf8Bytes(message));
   
   return {
     'Content-Type': 'application/json',
@@ -70,7 +67,7 @@ export async function POST(request) {
     // Try to get existing proxy wallet from Polymarket
     try {
       const path = `/v1/proxy-wallets/${userAddress}`;
-      const headers = buildSignedHeaders('GET', path, serverPrivateKey);
+      const headers = await buildSignedHeaders('GET', path, serverPrivateKey);
       
       console.log('[proxy] Fetching existing proxy wallet...');
       const response = await fetch(`${CLOB_HOST}${path}`, {
@@ -99,7 +96,7 @@ export async function POST(request) {
     
     // Create new proxy wallet
     const createPath = '/v1/proxy-wallets';
-    const headers = buildSignedHeaders('POST', createPath, serverPrivateKey);
+    const headers = await buildSignedHeaders('POST', createPath, serverPrivateKey);
     
     const createData = {
       owner: userAddress,
