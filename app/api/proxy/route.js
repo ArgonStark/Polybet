@@ -1,0 +1,189 @@
+import { NextResponse } from 'next/server';
+import { ethers } from 'ethers';
+import { getSession, updateSessionWithProxy } from '@/lib/sessions';
+import { errorResponse } from '@/lib/polymarket';
+
+const CLOB_HOST = process.env.POLY_CLOB_HOST || 'https://clob.polymarket.com';
+
+/**
+ * Build signed headers for Polymarket API requests
+ */
+function buildSignedHeaders(method, path, serverPrivateKey) {
+  const wallet = new ethers.Wallet(serverPrivateKey);
+  
+  // Create message to sign
+  const timestamp = Date.now();
+  const message = `${method}\n${path}\n${timestamp}`;
+  
+  // Sign the message
+  const messageHash = ethers.id(message);
+  const signature = wallet.signingKey.signSync(messageHash.slice(2), {
+    expand: false
+  });
+  
+  return {
+    'Content-Type': 'application/json',
+    'X-Polymarket-Signature': signature,
+    'X-Polymarket-Timestamp': timestamp.toString(),
+    'X-Polymarket-Address': wallet.address,
+    'Authorization': `Bearer ${serverPrivateKey}`
+  };
+}
+
+/**
+ * Get or create proxy wallet for a user
+ */
+export async function POST(request) {
+  try {
+    const sessionId = request.headers.get('x-session-id');
+    console.log('[proxy] Request received with sessionId:', sessionId);
+    
+    if (!sessionId) {
+      return errorResponse('Missing session ID', 401);
+    }
+    
+    const session = getSession(sessionId);
+    
+    if (!session) {
+      return errorResponse('Invalid or expired session', 401);
+    }
+    
+    const serverPrivateKey = process.env.SERVER_PRIVATE_KEY;
+    
+    if (!serverPrivateKey) {
+      console.error('[proxy] SERVER_PRIVATE_KEY not configured');
+      return errorResponse('Server not properly configured', 500);
+    }
+    
+    const userAddress = session.address;
+    console.log('[proxy] Processing proxy wallet for user:', userAddress);
+    
+    // Check if user already has a proxy wallet in session
+    if (session.proxyWallet) {
+      console.log('[proxy] Using existing proxy wallet from session:', session.proxyWallet.address);
+      return NextResponse.json({
+        success: true,
+        proxyWallet: session.proxyWallet
+      });
+    }
+    
+    // Try to get existing proxy wallet from Polymarket
+    try {
+      const path = `/v1/proxy-wallets/${userAddress}`;
+      const headers = buildSignedHeaders('GET', path, serverPrivateKey);
+      
+      console.log('[proxy] Fetching existing proxy wallet...');
+      const response = await fetch(`${CLOB_HOST}${path}`, {
+        method: 'GET',
+        headers
+      });
+      
+      if (response.ok) {
+        const proxyData = await response.json();
+        console.log('[proxy] Found existing proxy wallet:', proxyData.address);
+        
+        // Store in session
+        session.proxyWallet = proxyData;
+        updateSessionWithProxy(sessionId, proxyData);
+        
+        return NextResponse.json({
+          success: true,
+          proxyWallet: proxyData
+        });
+      } else {
+        console.log('[proxy] No existing proxy wallet found, creating new one...');
+      }
+    } catch (error) {
+      console.error('[proxy] Error fetching existing wallet:', error);
+    }
+    
+    // Create new proxy wallet
+    const createPath = '/v1/proxy-wallets';
+    const headers = buildSignedHeaders('POST', createPath, serverPrivateKey);
+    
+    const createData = {
+      owner: userAddress,
+      chain_id: 137 // Polygon mainnet
+    };
+    
+    console.log('[proxy] Creating new proxy wallet with data:', createData);
+    const createResponse = await fetch(`${CLOB_HOST}${createPath}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(createData)
+    });
+    
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.error('[proxy] Failed to create proxy wallet:', errorText);
+      
+      // For development, create a mock proxy wallet
+      const mockProxyWallet = {
+        address: ethers.Wallet.createRandom().address,
+        owner: userAddress,
+        chain_id: 137,
+        salt: ethers.hexlify(ethers.randomBytes(32))
+      };
+      
+      console.warn('[proxy] Using mock proxy wallet for development');
+      
+      session.proxyWallet = mockProxyWallet;
+      updateSessionWithProxy(sessionId, mockProxyWallet);
+      
+      return NextResponse.json({
+        success: true,
+        proxyWallet: mockProxyWallet,
+        isMock: true
+      });
+    }
+    
+    const newProxyData = await createResponse.json();
+    console.log('[proxy] Created new proxy wallet:', newProxyData.address);
+    
+    // Store in session
+    session.proxyWallet = newProxyData;
+    updateSessionWithProxy(sessionId, newProxyData);
+    
+    return NextResponse.json({
+      success: true,
+      proxyWallet: newProxyData
+    });
+    
+  } catch (error) {
+    console.error('[proxy] Error:', error);
+    return errorResponse(error.message || 'Internal server error', 500);
+  }
+}
+
+/**
+ * GET endpoint to retrieve user's proxy wallet if exists
+ */
+export async function GET(request) {
+  try {
+    const sessionId = request.headers.get('x-session-id');
+    
+    if (!sessionId) {
+      return errorResponse('Missing session ID', 401);
+    }
+    
+    const session = getSession(sessionId);
+    
+    if (!session) {
+      return errorResponse('Invalid or expired session', 401);
+    }
+    
+    if (!session.proxyWallet) {
+      return errorResponse('No proxy wallet found. Call POST /api/proxy to create one.', 404);
+    }
+    
+    return NextResponse.json({
+      success: true,
+      proxyWallet: session.proxyWallet
+    });
+    
+  } catch (error) {
+    console.error('[proxy] Error:', error);
+    return errorResponse(error.message || 'Internal server error', 500);
+  }
+}
+

@@ -6,6 +6,7 @@ import { ethers } from 'ethers';
 export default function Dashboard({ address, sessionId, setSessionId }) {
   const [balances, setBalances] = useState(null);
   const [depositAddress, setDepositAddress] = useState(null);
+  const [proxyWallet, setProxyWallet] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const authenticate = async () => {
@@ -31,6 +32,8 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       if (data.success) {
         setSessionId(data.sessionId);
         console.log('[Dashboard] Session ID set:', data.sessionId);
+        // Auto-fetch proxy wallet after successful login
+        await fetchProxyWallet();
       } else {
         console.error('[Dashboard] Login failed:', data.error);
       }
@@ -46,6 +49,31 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
     });
     const data = await res.json();
     if (data.success) setBalances(data.balances);
+  };
+
+  const fetchProxyWallet = async () => {
+    if (!sessionId) return;
+    
+    try {
+      console.log('[Dashboard] Fetching proxy wallet...');
+      const res = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 
+          'x-session-id': sessionId,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await res.json();
+      console.log('[Dashboard] Proxy wallet response:', data);
+      
+      if (data.success && data.proxyWallet) {
+        setProxyWallet(data.proxyWallet);
+        setDepositAddress(data.proxyWallet.address);
+      }
+    } catch (error) {
+      console.error('[Dashboard] Error fetching proxy wallet:', error);
+    }
   };
 
   const getDepositAddress = async () => {
@@ -85,7 +113,30 @@ export default function Dashboard({ address, sessionId, setSessionId }) {
       </div>
       
       <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-xl font-bold mb-4">Deposit Address</h2>
+        <h2 className="text-xl font-bold mb-4">Polymarket Proxy Wallet</h2>
+        <button onClick={fetchProxyWallet} className="mb-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Fetch Proxy Wallet</button>
+        {proxyWallet && (
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm text-gray-600">Address:</p>
+              <p className="font-mono text-sm bg-gray-50 p-3 rounded break-all">{proxyWallet.address}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Owner:</p>
+              <p className="font-mono text-xs bg-gray-50 p-2 rounded">{proxyWallet.owner}</p>
+            </div>
+            {proxyWallet.salt && (
+              <div>
+                <p className="text-sm text-gray-600">Salt:</p>
+                <p className="font-mono text-xs bg-gray-50 p-2 rounded break-all">{proxyWallet.salt}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 className="text-xl font-bold mb-4">Legacy Deposit Address</h2>
         <button onClick={getDepositAddress} className="mb-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Get Deposit Address</button>
         {depositAddress && <p className="font-mono text-sm bg-gray-50 p-4 rounded">{depositAddress}</p>}
       </div>

@@ -20,9 +20,16 @@ export async function GET(request) {
     
     console.log('[balances] Fetching balances for:', session.address);
     
+    // Use proxy wallet if available, otherwise use regular balances
+    const balancesEndpoint = session.proxyWallet 
+      ? `${CLOB_HOST}/v1/wallets/${session.proxyWallet.address}/balances`
+      : `${CLOB_HOST}/v1/balances`;
+    
+    console.log('[balances] Using endpoint:', balancesEndpoint);
+    
     // Fetch balances from Polymarket
     const balancesResponse = await authenticatedRequest(
-      `${CLOB_HOST}/v1/balances`,
+      balancesEndpoint,
       {
         method: 'GET'
       },
