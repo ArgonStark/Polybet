@@ -223,3 +223,4 @@ Verify `NEXT_PUBLIC_PRIVY_APP_ID` is correct and your Privy app is configured fo
 MIT
 
 # Polybet
+# Polybet
