@@ -6,25 +6,29 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { useAppStore } from '@/lib/store';
 import { connectWallet, getBalance } from '@/lib/api';
+import { usePolymarketMarkets } from '@/lib/hooks/usePolymarketMarkets';
 
 
 export default function Home() {
   const [isSDKReady, setIsSDKReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState<number>(0);
-  
+
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const { 
-    sessionId, 
-    safeAddress, 
+  const {
+    sessionId,
+    safeAddress,
     fid,
-    setSessionId, 
+    setSessionId,
     setSafeAddress,
-    setFid 
+    setFid
   } = useAppStore();
+
+  // Fetch crypto markets
+  const { markets, loading: marketsLoading, error: marketsError, lastUpdate } = usePolymarketMarkets();
   // Initialize Farcaster SDK
   useEffect(() => {
     const initSDK = async () => {
@@ -137,15 +141,15 @@ export default function Home() {
         <div className="text-center mb-10">
           <div className="inline-block mb-4">
             <h1 className="text-6xl font-extrabold bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent mb-3 animate-pulse">
-              🎲 Polymarket
+              🎲 PolyBet
             </h1>
             <div className="h-1 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"></div>
           </div>
           <p className="text-purple-200 text-lg font-medium">
-            Farcaster Polymarket Integration
+            15-Min Crypto Prediction Markets
           </p>
           <p className="text-purple-300/70 text-sm mt-2">
-            Secure wallet connection • Polygon Network
+            Farcaster • Polymarket • Polygon Network
           </p>
         </div>
 
@@ -260,6 +264,101 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Crypto Markets Section */}
+        <div className="bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl rounded-3xl p-6 mb-8 border border-white/20 shadow-2xl shadow-purple-500/10">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white">
+              🎯 15-Minute Crypto Markets
+            </h2>
+            <div className="text-sm text-purple-300">
+              {marketsLoading ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                <span>Updated: {new Date(lastUpdate).toLocaleTimeString()}</span>
+              )}
+            </div>
+          </div>
+
+          {marketsError && (
+            <div className="bg-red-500/20 border border-red-400 text-red-200 px-4 py-3 rounded-lg mb-4 text-center text-sm">
+              Error: {marketsError}
+            </div>
+          )}
+
+          {/* Markets Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {['BTC', 'ETH', 'SOL', 'XRP'].map((crypto) => {
+              const market = markets.find(m => m.crypto === crypto);
+              const upPrice = market?.upPrice || 0.5;
+              const downPrice = market?.downPrice || 0.5;
+
+              return (
+                <div
+                  key={crypto}
+                  className="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-400/30 rounded-2xl p-5 hover:border-purple-400/50 transition-all hover:scale-105"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-white">{crypto}</h3>
+                    {market?.active ? (
+                      <span className="px-3 py-1 bg-green-500/20 border border-green-400 text-green-300 text-xs rounded-full">
+                        LIVE
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-gray-500/20 border border-gray-400 text-gray-300 text-xs rounded-full">
+                        WAITING
+                      </span>
+                    )}
+                  </div>
+
+                  {market ? (
+                    <>
+                      <div className="space-y-3 mb-4">
+                        <div className="flex justify-between items-center bg-green-500/10 border border-green-400/30 rounded-xl p-3">
+                          <span className="text-green-300 font-semibold">📈 UP</span>
+                          <span className="text-green-100 font-bold text-lg">
+                            ${upPrice.toFixed(3)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center bg-red-500/10 border border-red-400/30 rounded-xl p-3">
+                          <span className="text-red-300 font-semibold">📉 DOWN</span>
+                          <span className="text-red-100 font-bold text-lg">
+                            ${downPrice.toFixed(3)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-purple-300 mb-3">
+                        {market.question.slice(0, 80)}...
+                      </div>
+
+                      {market.endTime && (
+                        <div className="text-xs text-purple-400">
+                          Ends: {new Date(market.endTime).toLocaleTimeString()}
+                        </div>
+                      )}
+
+                      {sessionId && balance > 0 && (
+                        <button className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-all transform hover:scale-105">
+                          Place Bet
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-purple-300/70">
+                      <div className="animate-spin text-3xl mb-2">⏳</div>
+                      <p className="text-sm">Loading market...</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 text-center text-purple-300/70 text-xs">
+            Markets update automatically every 15 minutes • Prices update in real-time
+          </div>
+        </div>
 
 
         {/* Footer */}
