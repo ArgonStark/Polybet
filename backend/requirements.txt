@@ -1,0 +1,23 @@
+# FastAPI and server dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# Polymarket CLOB client
+py-clob-client==0.28.0
+
+# Web3 and Ethereum dependencies (compatible versions)
+web3>=7.0.0
+eth-account>=0.13.0
+eth-typing>=4.0.0
+
+# Environment and utilities
+python-dotenv==1.0.0
+
+# HTTP client
+httpx==0.25.1
+requests==2.31.0
+
+# Async support
+aiofiles==23.2.1

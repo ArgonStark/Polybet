@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@polymarket/real-time-data-client": "^1.4.0"
+  }
+}
