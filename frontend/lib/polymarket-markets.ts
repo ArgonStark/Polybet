@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
+// Use our Next.js API routes to avoid CORS issues
+const API_BASE_URL = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
 
 export interface Market {
   condition_id: string;
@@ -43,7 +44,7 @@ export interface MarketData {
 }
 
 /**
- * Fetch markets from Polymarket Gamma API
+ * Fetch markets from Polymarket via our API route (to avoid CORS)
  */
 export async function fetchMarkets(params?: {
   limit?: number;
@@ -67,7 +68,7 @@ export async function fetchMarkets(params?: {
     if (params?.ascending !== undefined) queryParams.append('ascending', params.ascending.toString());
     if (params?.tag) queryParams.append('tag', params.tag);
 
-    const response = await axios.get(`${GAMMA_API_URL}/markets?${queryParams.toString()}`);
+    const response = await axios.get(`${API_BASE_URL}/api/markets?${queryParams.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching markets:', error);
@@ -78,10 +79,12 @@ export async function fetchMarkets(params?: {
 /**
  * Fetch a specific market by condition_id
  */
-export async function fetchMarketByConditionId(conditionId: string): Promise<Market> {
+export async function fetchMarketByConditionId(conditionId: string): Promise<Market | null> {
   try {
-    const response = await axios.get(`${GAMMA_API_URL}/markets/${conditionId}`);
-    return response.data;
+    // Fetch all markets and filter (since we don't have a direct endpoint)
+    const markets = await fetchMarkets({ active: true, limit: 100 });
+    const market = markets.find(m => m.condition_id === conditionId);
+    return market || null;
   } catch (error) {
     console.error('Error fetching market:', error);
     throw error;
@@ -94,12 +97,16 @@ export async function fetchMarketByConditionId(conditionId: string): Promise<Mar
  */
 export async function fetchCrypto15MinMarkets(): Promise<MarketData[]> {
   try {
+    console.log('🔍 Fetching crypto 15-minute markets...');
+
     // Fetch active markets with crypto tag or search in description
     const markets = await fetchMarkets({
       active: true,
       closed: false,
       limit: 100,
     });
+
+    console.log(`📊 Fetched ${markets.length} total markets`);
 
     // Filter for 15-minute crypto markets
     const cryptoMarkets = markets
@@ -110,21 +117,28 @@ export async function fetchCrypto15MinMarkets(): Promise<MarketData[]> {
 
         // Look for markets with 15m or 15-minute in the slug/question/description
         const is15Min = slug.includes('15m') ||
-                       question.includes('15') ||
-                       description.includes('15');
+                       slug.includes('15-min') ||
+                       question.includes('15 min') ||
+                       question.includes('15-min') ||
+                       description.includes('15 min') ||
+                       description.includes('15-min');
 
         // Look for crypto symbols (BTC, ETH, SOL, XRP)
         const hasCrypto = ['btc', 'eth', 'sol', 'xrp'].some(crypto =>
-          slug.includes(crypto) ||
-          question.includes(crypto.toUpperCase()) ||
+          slug.toLowerCase().includes(crypto) ||
+          question.includes(crypto) ||
           description.includes(crypto)
         );
 
-        return is15Min && hasCrypto && market.active;
+        // Look for up/down pattern
+        const hasUpDown = slug.includes('up') || slug.includes('down') ||
+                         question.includes('up') || question.includes('down');
+
+        return (is15Min || hasUpDown) && hasCrypto && market.active;
       })
       .map((market) => {
         // Determine which crypto this is
-        const slug = market.market_slug || market.slug || '';
+        const slug = (market.market_slug || market.slug || '').toLowerCase();
         const question = market.question.toLowerCase();
 
         let crypto: 'BTC' | 'ETH' | 'SOL' | 'XRP' = 'BTC';
@@ -142,9 +156,11 @@ export async function fetchCrypto15MinMarkets(): Promise<MarketData[]> {
         };
       });
 
+    console.log(`✅ Found ${cryptoMarkets.length} crypto 15-minute markets`);
+
     return cryptoMarkets;
   } catch (error) {
-    console.error('Error fetching crypto 15min markets:', error);
+    console.error('❌ Error fetching crypto 15min markets:', error);
     throw error;
   }
 }
