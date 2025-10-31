@@ -1,51 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
+import { NextResponse } from 'next/server';
+import { ClobClient } from '@polymarket/clob-client';
 
 // Mark this route as dynamic
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(request: NextRequest) {
+const HOST = 'https://clob.polymarket.com';
+const CHAIN_ID = 137; // Polygon
+
+export async function GET() {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const limit = searchParams.get('limit') || '100';
-    const offset = searchParams.get('offset') || '0';
-    const closed = searchParams.get('closed') || 'false';
-    const active = searchParams.get('active') || 'true';
+    console.log('[Markets API] Fetching markets using CLOB client...');
 
-    const url = `${GAMMA_API_URL}/markets?limit=${limit}&offset=${offset}&closed=${closed}&active=${active}`;
+    // Create CLOB client (no auth needed for public data)
+    // Parameters: host, chainId, signer (optional), creds (optional)
+    const client = new ClobClient(HOST, CHAIN_ID);
 
-    console.log('Fetching markets from:', url);
+    // Fetch simplified markets (returns {data: market[], next_cursor: string})
+    const response = await client.getSimplifiedMarkets();
 
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'PolyBet/1.0',
-      },
-      cache: 'no-store', // Disable caching for real-time data
-    });
+    console.log('[Markets API] Successfully fetched markets');
 
-    if (!response.ok) {
-      console.error('Gamma API error:', response.status, response.statusText);
-      return NextResponse.json(
-        { error: `Gamma API error: ${response.statusText}` },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-
-    // Add CORS headers to allow frontend to access this
-    return NextResponse.json(data, {
+    // Return just the data array
+    return NextResponse.json(response.data || [], {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
       },
     });
   } catch (error: any) {
-    console.error('Error fetching markets:', error);
+    console.error('[Markets API] Exception:', error.message);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch markets' },
+      { error: error.message || 'Failed to fetch markets', details: String(error) },
       { status: 500 }
     );
   }
