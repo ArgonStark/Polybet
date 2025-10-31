@@ -164,4 +164,28 @@ export async function healthCheck(): Promise<any> {
   return data;
 }
 
+/**
+ * Get available markets
+ */
+export async function getMarkets(): Promise<any> {
+  const { data } = await api.get('/markets');
+  return data;
+}
+
+/**
+ * Get market details by token ID
+ */
+export async function getMarketDetails(tokenId: string): Promise<any> {
+  const { data } = await api.get(`/markets/${tokenId}`);
+  return data;
+}
+
+/**
+ * Get next refresh time for markets
+ */
+export async function getNextRefreshTime(): Promise<any> {
+  const { data } = await api.get('/markets/next-refresh');
+  return data;
+}
+
 export default api;

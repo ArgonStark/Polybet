@@ -1,16 +1,13 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
-const inter = Inter({ subsets: ['latin'] });
-
 export const metadata: Metadata = {
-  title: 'Polymarket Mini - Farcaster',
-  description: 'Trade prediction markets on Farcaster',
+  title: 'CryptoPredict - 15-Min Crypto Predictions',
+  description: 'Predict BTC, ETH, SOL, XRP prices every 15 minutes on Farcaster',
   openGraph: {
-    title: 'Polymarket Mini',
-    description: 'Trade prediction markets on Farcaster',
+    title: 'CryptoPredict',
+    description: 'Predict crypto prices every 15 minutes. BTC • ETH • SOL • XRP',
   },
 };
 
@@ -21,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <Providers>
           {children}
         </Providers>
